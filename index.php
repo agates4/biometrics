@@ -67,8 +67,8 @@ class imagediff{
         
         ($this->rectZone[0]/$this->rectZone[1] > $ratio_src) ? $this->rectZone[0] = $this->rectZone[1]*$ratio_src : $this->rectZone[1] = $this->rectZone[0]/$ratio_src;
         
-        $i1 = @imagecreatefromjpeg($i1);
-        $i2 = @imagecreatefromjpeg($i2);
+        $i1 = @imagecreatefrompng($i1);
+        $i2 = @imagecreatefrompng($i2);
         
         $zone1 = imagecreate($this->rectZone[0], $this->rectZone[1]);
         imagecopyresampled($zone1, $i1, 0, 0, 0, 0, $this->rectZone[0], $this->rectZone[1], $src_W, $src_H);
@@ -77,15 +77,12 @@ class imagediff{
         
         imagefilter($zone1,IMG_FILTER_GRAYSCALE);
         imagefilter($zone2,IMG_FILTER_GRAYSCALE);
-        /*
+        
         $gaussian = array(array(1.0, 2.0, 1.0), array(2.0, 4.0, 2.0), array(1.0, 2.0, 1.0));
         imageconvolution($zone1, $gaussian, 16, 0);
         imageconvolution($zone2, $gaussian, 16, 0);
         imagefilter($zone1,IMG_FILTER_PIXELATE,round($this->rectZone[0]/5,0));
         imagefilter($zone2,IMG_FILTER_PIXELATE,round($this->rectZone[0]/5,0));
-        */
-        
-        
         
         $sx1 = imagesx($zone1);
         $sy1 = imagesy($zone1);
@@ -104,7 +101,15 @@ class imagediff{
          
                 $rgb2 = imagecolorat($zone2, $x, $y);
                 $pix2 = imagecolorsforindex($zone2, $rgb2);
-                
+
+                // var_dump($pix1);
+                // if (
+                //     $pix1['alpha'] == 0 && $pix2['alpha'] == 0.0 && $pix1['red'] == 255 && $pix1['green'] == 255 && $pix1['blue'] == 255 && $pix2['red'] == 255 && $pix2['green'] == 255 && $pix2['blue'] == 255)
+                // {
+                //     $different_pixels++;
+                //     continue;
+                // }
+                                
                 $mediapixels = pow($pix1['red']-$pix2['red'],2) + pow($pix1['green']-$pix2['green'],2) + pow($pix1['blue']-$pix2['blue'],2);
                 $sumtotal = $sumtotal + $mediapixels;
                 if($mediapixels>1500){
@@ -125,10 +130,10 @@ class imagediff{
         
         
         $total = $sx1 * $sy1;
-        $percent = number_format(100 * $different_pixels / $total, 2);
+        $percent = 100 - (100 * $different_pixels / $total);
         
-        array_push($this->different_pixels, $different_pixels, $percent, ($this->rectZone[0]*$this->rectZone[1]));
-        return $this->different_pixels;
+        array_push($this->different_pixels, $percent);
+        return $percent;
     }
     private function imagehex($image)
     {
@@ -175,13 +180,12 @@ class imagediff{
 
     public function diff()
     {
-        $hex1 = $this->imagehex($this->image1);
-        $hex2 = $this->imagehex($this->image2);
-        $result = (count($hex1) + count($hex2)) - count(array_diff($hex2, $hex1)) - ($this->rectZone[0] * $this->rectZone[1]);
-        return $result / ((count($hex1) + count($hex2)) / 2);
+        return $this->createDiffImage($this->image1src, $this->image2src) / 100;
     }
     public function imgResult()
     {
+        $hex1 = $this->imagehex($this->image1);
+        $hex2 = $this->imagehex($this->image2);
         echo "<img width=200 src='" . $this->image1src . "'>";
         echo "<img width=200 src='" . $this->image2src . "'> = ";
         echo '<img src="data:image/jpeg;base64,' . $this->diference[0] . '" alt="photo">';
@@ -208,6 +212,7 @@ $height = $tempImage1[1];
 
 $Time_inicio = microtime(true);
 $diff = new imagediff($image01, $image02, $width/4, $height/4, true);
+
 echo "Size: " . $width/4 . " X " . $height/4 . "<br />";
 print 'Equality: ' . ($diff->diff() * 100) . '%<br />';
 if ($diff->getDebug() == true) {
@@ -238,11 +243,21 @@ if ($diff3->getDebug() == true) {
     $Memory_fin = memory_get_usage();
 }
 
-if ($diff->getDebug() == true) {
-    $Time_fin_total = microtime(true);
+$Time_inicio = microtime(true);
+$diff4 = new imagediff($image01, $image02, $width, $height, true);
+echo "<br>Size: " . $width . " X " . $height . "<br />";
+print 'Equality: ' . ($diff4->diff() * 100) . '%<br />';
+if ($diff4->getDebug() == true) {
+    $diff4->imgResult();
+    $Time_fin = microtime(true);
     $Memory_fin = memory_get_usage();
-    $ratio1 = ( ( ($width/4) + ($height/4) ) / ( $width + $height ) * ( $diff->diff() * 100));
-    $ratio2 = ( ( ($width/3) + ($height/3) ) / ( $width + $height ) * ($diff2->diff() * 100));
-    $ratio3 = ( ( ($width/2) + ($height/2) ) / ( $width + $height ) * ($diff3->diff() * 100));
-    echo "<br>Normalized Match Rate: " . ($ratio1 + $ratio2 + $ratio3) . "<br>";
 }
+
+// if ($diff->getDebug() == true) {
+//     $Time_fin_total = microtime(true);
+//     $Memory_fin = memory_get_usage();
+//     $ratio1 = ( ( ($width/4) + ($height/4) ) / ( $width + $height ) * ( $diff->diff() * 100));
+//     $ratio2 = ( ( ($width/3) + ($height/3) ) / ( $width + $height ) * ($diff2->diff() * 100));
+//     $ratio3 = ( ( ($width/2) + ($height/2) ) / ( $width + $height ) * ($diff3->diff() * 100));
+//     echo "<br>Normalized Match Rate: " . ($ratio1 + $ratio2 + $ratio3) . "<br>";
+// }
