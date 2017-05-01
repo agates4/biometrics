@@ -162,7 +162,18 @@ Class ImagesComparison{
 	
 	public function printImage($dst = NULL){
 		if($dst == NULL) header("Content-type: image/png");
-		imagepng($this->im_a, $dst);
+		$oldw = imagesx($this->im_a);
+		$oldh = imagesy($this->im_a);
+
+		$newimage = imagecreatetruecolor(2 * $oldw, $oldh); // Creates a black image
+
+		// Fill it with white (optional)
+		// $white = imagecolorallocate($newimage, 255, 255, 255);
+		// imagefill($newimage, 0, 0, $white);
+
+		imagecopy($newimage, $this->im_a, 0, 0, 0, 0, $oldw, $oldh);
+		imagecopy($newimage, $this->im_b, $oldw, 0, 0, 0, $oldw, $oldh);
+		imagepng($newimage, $dst);
 	}
 }
 ?>
